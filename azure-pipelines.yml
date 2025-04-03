@@ -1,0 +1,45 @@
+trigger:
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  # Container registry details
+  acrRegistry: 'youracrregistryname' # Replace with your ACR registry name
+  acrImageName: 'my-python-app'
+  dockerfilePath: '$(Build.SourcesDirectory)/Dockerfile'
+
+steps:
+- task: UsePythonVersion@0
+  inputs:
+    versionSpec: '3.10'
+  displayName: 'Use Python $(pythonVersion)'
+
+- task: PipAuthenticate@1
+  inputs:
+    artifactFeed: '$(System.TeamProjectId)'
+  displayName: 'Pip Authenticate'
+
+- task: InstallDependencies@1
+  displayName: 'Install dependencies'
+  inputs:
+    packageSource: 'pypi'
+    requirementsFile: '$(Build.SourcesDirectory)/requirements.txt'
+
+- task: Docker@2
+  displayName: 'Build and push Docker image'
+  inputs:
+    containerRegistry: 'Azure Container Registry Connection' # Replace with your ACR service connection name
+    repository: '$(acrRegistry).azurecr.io/$(acrImageName)'
+    command: 'buildAndPush'
+    Dockerfile: '$(dockerfilePath)'
+    tags: |
+      $(Build.BuildId)
+      latest
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'drop'
+    publishLocation: 'Container'
